@@ -1,10 +1,34 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { TouchableOpacity, ImageBackground, ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { CITIES, getWeatherBackgroundImage, getWeatherIcon } from "./utils";
 
 import * as Location from "expo-location";
 import * as Permissions from "expo-permissions";
+
+import { CITIES, getWeatherBackgroundImage, getWeatherIcon } from "./utils";
+
+const CitySelectionButtons = props => (
+  <View style={styles.cityContainer}>
+    <TouchableOpacity
+      key="currentLocation"
+      style={styles.currentLocation}
+      onPress={() => props.onChooseCity("")}
+    >
+      <Text style={styles.cityName}>Current Location</Text>
+    </TouchableOpacity>
+    {CITIES.map(city => {
+      return (
+        <TouchableOpacity
+          key={city.name}
+          style={styles.cityButton}
+          onPress={() => props.onChooseCity(city.name)}
+        >
+          <Text style={styles.cityName}>{city.name}</Text>
+        </TouchableOpacity>
+      );
+    })}
+  </View>
+);
 
 const Loading = () => (
   <View style={styles.loading}>
@@ -79,41 +103,41 @@ const WeatherCard = ({ location, error, loading }) => {
   );
 };
 
-const CitySelectionButtons = props => (
-  <View style={[styles.cityContainer, { backgroundColor: "black" }]}>
-    <TouchableOpacity
-      key="currentLocation"
-      style={styles.currentLocation}
-      onPress={() => props.onChooseCity("")}
-    >
-      <Text style={styles.cityName}>Current Location</Text>
-    </TouchableOpacity>
-    {CITIES.map(city => {
-      return (
-        <TouchableOpacity
-          key={city.name}
-          style={styles.cityButton}
-          onPress={() => props.onChooseCity(city.name)}
-        >
-          <Text style={styles.cityName}>{city.name}</Text>
-        </TouchableOpacity>
-      );
-    })}
-  </View>
-);
-
-
-
 export default function App() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
   const [location, setLocation] = useState({
     name: "",
     main: { temp: "" },
     wind: { speed: "" },
     weather: [{ main: "", description: "" }]
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
+  getLocationAsync = async () => {
+    // const { status } = await Permissions.askAsync(Permissions.LOCATION);
+    // if (status !== "granted") {
+    //   return;
+    // }
+
+    // const location = await Location.getCurrentPositionAsync();
+    // getWeather(location.coords.latitude, location.coords.longitude);
+    getWeather(10.817141, 106.707954);
+  };
+
+  getWeather = async (latitude, longitude, imgUrl = "") => {
+    setLoading(true);
+    const API_KEY = "3de6162d3745365b168ade2bbe4e1d66";
+    const api = `http://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${API_KEY}`;
+
+    try {
+      const response = await fetch(api);
+      const jsonData = await response.json();
+      setLocation({ ...jsonData, imgUrl });
+    } catch (error) {
+      setError(true);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
     getLocationAsync();
@@ -130,65 +154,26 @@ export default function App() {
     }
   };
 
-
-
-
-
-  getLocationAsync = async () => {
-    const { status } = await Permissions.askAsync(Permissions.LOCATION);
-    if (status !== "granted") {
-      return;
-    }
-    const location = await Location.getCurrentPositionAsync();
-    getWeather(location.coords.latitude, location.coords.longitude);
-  };
-
-  getWeather = async (latitude, longitude, imgUrl = "") => {
-    setLoading(true);
-    const API_KEY = "401d3a8ae2633532921b44c4cb3959ea";
-    const api = `http://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${API_KEY}`;
-    try {
-      const response = await fetch(api);
-      const jsonData = await response.json();
-      setLocation({ ...jsonData, imgUrl });
-    } catch (error) {
-      setError(true);
-    }
-    setLoading(false);
-  };
-  console.log("khoa", location)
-
-
   const bgImage = {
     uri: location.imgUrl || getWeatherBackgroundImage(location.weather[0].main)
   };
 
-
   return (
-    <View style={{ height: "100%", width: "100%" }} >
-      <ImageBackground source={bgImage} style={styles.bg}>
-        <WeatherCard location={location} error={error} loading={loading} />
-        <View style={{ backgroundColor: "red", height: 100, width: 100 }} />
-        <Text>Hello</Text>
-        <CitySelectionButtons onChooseCity={onChooseCity} />
-      </ImageBackground>
-    </View>
+    <ImageBackground source={bgImage} style={styles.bg}>
+      <WeatherCard location={location} error={error} loading={loading} />
+      <CitySelectionButtons onChooseCity={onChooseCity} />
+    </ImageBackground>
   );
 }
 
-
-
 const styles = StyleSheet.create({
   bg: {
-    flex: 1,
     width: "100%",
     height: "100%",
     backgroundColor: "black"
   },
   container: {
-    height: "100%",
     alignItems: "center",
-    backgroundColor: "pink",
     justifyContent: "center"
   },
   weatherContainer: {
@@ -215,8 +200,6 @@ const styles = StyleSheet.create({
     justifyContent: "center"
   },
   cityContainer: {
-    height: 100,
-    width: 100,
     flex: 1,
     flexWrap: "wrap",
     flexDirection: "row",
